@@ -20,14 +20,6 @@ def get_db():
     finally:
         session.close()
 
-def process_risk(risk_id: int, db: Session):
-    time.sleep(10)
-    risk = db.query(Risk).filter(Risk.id == risk_id).first()
-    if risk:
-        risk.status = RiskStatus.completed
-        db.commit()
-
-
 @app.get("/")
 def home():
     return "Risk API"
