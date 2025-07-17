@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException, status
+from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 import time
 from models import RiskStatus, Risk, Task
@@ -33,18 +33,29 @@ def home():
     return "Risk API"
 
 @app.post("/risks", response_model=RiskOut)
-def create_risk(risk: RiskCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    new_risk = Risk(title=risk.title, description=risk.description, category=risk.category)
+def create_risk(risk: RiskCreate, db: Session = Depends(get_db)):
+    new_risk = Risk(
+        title=risk.title,
+        description=risk.description,
+        category=risk.category,
+        status="in_process"
+    )
     db.add(new_risk)
     db.commit()
     db.refresh(new_risk)
 
     for assignee in ["security officer", "team leader"]:
-        task = Task(risk_id=new_risk.id, assignee=assignee)
+        task = Task(risk_id=new_risk.id, assignee=assignee, status="in_progress")
         db.add(task)
 
     db.commit()
-    background_tasks.add_task(process_risk, new_risk.id, db)
+
+    #Simulate some processing
+    time.sleep(10)
+
+    new_risk.status = "completed"
+    db.commit()
+
     tasks = db.query(Task).filter(Task.risk_id == new_risk.id).all()
 
     return RiskOut(**new_risk.__dict__, tasks=tasks)
